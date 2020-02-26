@@ -1,4 +1,7 @@
 import datetime
+
+from selenium.webdriver.support.wait import WebDriverWait
+
 from credentials import *
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException
@@ -56,7 +59,6 @@ def get_desired_group_list(group_list):
 
 class Request:
 
-
     def __init__(self, url):
         self.browser = get_web_driver()
         self.url = url
@@ -80,15 +82,14 @@ class Request:
         except NoSuchElementException:
             return self.get_selenium_res()
 
-        self.browser.find_element_by_id('navItem_1434659290104689').click()
-        sleep(1.5)
-        side_bar = self.browser.find_elements_by_class_name('f4g9fmn2')[1]
+        nav_button = self.browser.find_element_by_id('navItem_1434659290104689')
+        webdriver.ActionChains(self.browser).move_to_element(nav_button).click(nav_button).perform()
+        sleep(2)
 
         # if there is expand button
-        while side_bar.find_elements_by_tag_name('a')[-1].tag_name is not None:
-
+        while True:
             try:
-                a_ele = side_bar.find_elements_by_tag_name('a')[-1]
+                a_ele = self.browser.find_element_by_link_text('See more...')
                 # expand group list
                 a_ele.find_element_by_tag_name('i').click()
                 sleep(0.5)
@@ -98,7 +99,6 @@ class Request:
 
         group_list = self.browser.find_elements_by_class_name('_2yaa')
         links_list = get_desired_group_list(group_list)
-
         for link in links_list:
             link = link + '&sorting_setting=CHRONOLOGICAL'
             self.browser.get(link)
@@ -120,21 +120,25 @@ class Request:
 
                 else:
                     for post in posts:
+                        try:
 
-                        date = post.find_element_by_tag_name('abbr').get_attribute('title')
-                        datetime_object = datetime.datetime.strptime(date, '%d/%m/%Y, %H:%M')
+                            date = post.find_element_by_tag_name('abbr').get_attribute('title')
+                            datetime_object = datetime.datetime.strptime(date, '%d/%m/%Y, %H:%M')
 
-                        # if post's initial date is within range -> check presence of key words
-                        if self.current_time - self.margin <= datetime_object <= self.current_time:
+                            # if post's initial date is within range -> check presence of key words
+                            if self.current_time - self.margin <= datetime_object <= self.current_time:
 
-                            lines = post.find_elements_by_tag_name('p')
-                            for line in lines:
-                                keywords_list = [line.rstrip('\n') for line in open('keywords.txt')]
-                                for word in keywords_list:
-                                    if word in line.text:
-                                        direct_link = post.find_element_by_class_name('_5pcq').get_attribute('href')
-                                        print('keyword found!')
-                                        logging.info(' keyword: {} was found in the post: {}'.format(word, direct_link))
+                                lines = post.find_elements_by_tag_name('p')
+                                for line in lines:
+                                    keywords_list = [line.rstrip('\n') for line in open('keywords.txt')]
+                                    for word in keywords_list:
+                                        if word in line.text:
+                                            direct_link = post.find_element_by_class_name('_5pcq').get_attribute('href')
+                                            print('keyword found!')
+                                            logging.info(
+                                                ' keyword: {} was found in the post: {}'.format(word, direct_link))
+                        except NoSuchElementException:
+                            pass
                     break
 
         self.browser.close()
